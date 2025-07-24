@@ -32,7 +32,7 @@ pipeline
          {
              script
              {
-                 checkout([$class: 'GitSCM', branches: [[name: '*/main']], extensions: [], userRemoteConfigs: [[url: ${GIT_REPO}]]])
+                 checkout([$class: 'GitSCM', branches: [[name: '*/main']], extensions: [], userRemoteConfigs: [[url: GIT_REPO]]])
                  COMMIT = sh (script: "git rev-parse --short=10 HEAD", returnStdout: true).trim()                   
 
              }
