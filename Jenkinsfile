@@ -6,15 +6,18 @@ pipeline
  agent any
  environment
  {
-     AWS_ACCOUNT_ID="930264708953"
-     AWS_DEFAULT_REGION="us-east-1" 
-     IMAGE_REPO_NAME="mavenwebapp"
+     AWS_ACCOUNT_ID="434000704561"
+     AWS_DEFAULT_REGION="ap-southeast-1" 
+     IMAGE_REPO_NAME="devsecops-images"
      REPOSITORY_URI = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com/${IMAGE_REPO_NAME}"
+     GIT_REPO  = "https://github.com/dev1git/maven-web-application.git"
+     NEXUS_URL = "54.169.118.38:8081"
      
  }
  tools
  {
-      maven 'MAVEN_3.8.4'
+      maven '3.9.11'
+      'SonarScanner 4.0'
  }   
 
  options 
@@ -30,10 +33,8 @@ pipeline
          {
              script
              {
-                 checkout([$class: 'GitSCM', branches: [[name: '*/development']], extensions: [], userRemoteConfigs: [[url: 'https://github.com/dev1git/maven-web-application.git']]])
-                 COMMIT = sh (script: "git rev-parse --short=10 HEAD", returnStdout: true).trim()  
-            
-                 
+                 checkout([$class: 'GitSCM', branches: [[name: '*/dev']], extensions: [], userRemoteConfigs: [[url: '${GIT_REPO}']]])
+                 COMMIT = sh (script: "git rev-parse --short=10 HEAD", returnStdout: true).trim()                   
 
              }
              
@@ -50,7 +51,7 @@ pipeline
      {
          steps
          {
-            withSonarQubeEnv('Sonarqube-Server') 
+            withSonarQubeEnv('sonarqube') 
              {
                 sh "mvn sonar:sonar"
              }  
@@ -62,7 +63,7 @@ pipeline
          {
              timeout(time: 1, unit: 'HOURS') 
              {
-                waitForQualityGate abortPipeline: true, credentialsId: 'SONARQUBE-CRED'
+                waitForQualityGate abortPipeline: true, credentialsId: 'sonar-token'
             }
          }
      }
@@ -74,7 +75,7 @@ pipeline
              script
              {
                  def readPom = readMavenPom file: 'pom.xml'
-                 def nexusrepo = readPom.version.endsWith("SNAPSHOT") ? "wallmart-snapshot" : "wallmart-release"
+                 def nexusrepo = readPom.version.endsWith("SNAPSHOT") ? "maven-snapshot" : "maven-release"
                  nexusArtifactUploader artifacts: 
                  [
                      [
@@ -84,9 +85,9 @@ pipeline
                          type: 'war'
                      ]
                 ], 
-                         credentialsId: 'Nexus-Cred', 
+                         credentialsId: 'nexus', 
                          groupId: "${readPom.groupId}", 
-                         nexusUrl: '3.82.213.203:8081', 
+                         nexusUrl: ${NEXUS_URL}, 
                          nexusVersion: 'nexus3', 
                          protocol: 'http', 
                          repository: "${nexusrepo}", 
@@ -95,6 +96,8 @@ pipeline
              }
          }
      }
+
+     /*
      stage('Login to AWS ECR')
      {
          steps
@@ -149,6 +152,7 @@ pipeline
 
          }
      }
+     */
  }
 
  post
@@ -157,6 +161,8 @@ pipeline
      {
          cleanWs()
      }
+
+     /*
      success
      {
         slackSend channel: 'build-notifications',color: 'good', message: "started  JOB : ${env.JOB_NAME}  with BUILD NUMBER : ${env.BUILD_NUMBER}  BUILD_STATUS: - ${currentBuild.currentResult} To view the dashboard (<${env.BUILD_URL}|Open>)"
@@ -183,6 +189,7 @@ pipeline
         ''', compressLog: true, replyTo: 'njdevops321@gmail.com', 
         subject: '$PROJECT_NAME - $BUILD_NUMBER - $BUILD_STATUS', to: 'njdevops321@gmail.com'
      }
+     */
  }
 
 }
