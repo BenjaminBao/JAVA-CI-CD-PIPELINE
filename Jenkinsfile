@@ -17,7 +17,6 @@ pipeline
  tools
  {
       maven '3.9.11'
-      'SonarScanner 4.0'
  }   
 
  options 
